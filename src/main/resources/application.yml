@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: Franchise System
+
+  # R2DBC Connection
+  r2dbc:
+    url: r2dbc:mysql://localhost:3306/franchise_system
+    username: root
+    password: 123456
+    # R2DBC Pool Connection
+    pool:
+      enabled: true
+      initial-size: 15
+      max-size: 30
+      max-life-time: 30000
+      max-idle-time: 20000
+      max-create-connection-time: 10000
+      validation-query: SELECT 1
+
+#R2DBC Logging
+logging:
+  level:
+    org:
+      springframework:
+        data:
+          r2dbc: INFO
+        transaction: INFO
+    io:
+      r2dbc:
+        pool: INFO

@@ -101,3 +101,6 @@ The server will start on http://localhost:8080.
 - **Separation of Concerns:** Strictly layered architecture separating Controllers (Handlers), Services (Business Logic), and Repositories (Data Access).
 
 Developed as a practical assessment for a Backend Developer position.
+
+#### Study References
+- [Reactive MySQL with Spring Boot](https://robinedwardellis.medium.com/reactive-mysql-with-spring-boot-1b184b9ea58a)
