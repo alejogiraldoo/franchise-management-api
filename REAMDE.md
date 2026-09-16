@@ -50,12 +50,12 @@ The database architecture follows a strict hierarchical model designed for high 
 | `PATCH` | `/branches/{id}/name` | Update the name of a branch *(Bonus)* |
 
 ### Products & Inventory
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/branches/{branchId}/products` | Add a new product to a branch |
-| `DELETE` | `/branches/{branchId}/products/{productId}`| Remove a product from a branch |
-| `PATCH` | `/products/{id}/stock` | Modify the stock quantity of a product |
-| `PATCH` | `/products/{id}/name` | Update the name of a product *(Bonus)* |
+| Method | Endpoint                                          | Description |
+| :--- |:--------------------------------------------------| :--- |
+| `POST` | `/branches/{branchId}/products`                   | Add a new product to a branch |
+| `DELETE` | `/branches/{branchId}/products/{productId}`       | Remove a product from a branch |
+| `PATCH` | `/branches/{branchId}/products/{productId}/stock` | Modify the stock quantity of a product |
+| `PATCH` | `/products/{id}/name`                             | Update the name of a product *(Bonus)* |
 
 ### Analytics
 | Method | Endpoint | Description |

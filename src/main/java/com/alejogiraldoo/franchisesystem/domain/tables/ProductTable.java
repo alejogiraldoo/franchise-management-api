@@ -1,6 +1,7 @@
 package com.alejogiraldoo.franchisesystem.domain.tables;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
@@ -10,17 +11,15 @@ import org.springframework.data.relational.core.mapping.Table;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "branches")
-public class BranchesTable {
+@Builder
+@Table(name = "products")
+public class ProductTable {
 
     @Id
-    @Column(value="branch_id")
+    @Column(value="product_id")
     private Integer id;
 
-    @Column(value="branch_name")
+    @Column(value="product_name")
     private String name;
-
-    @Column(value="franchise_id")
-    private Integer franchiseId;
 
 }
