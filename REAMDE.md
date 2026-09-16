@@ -77,7 +77,7 @@ cd franchise-management-api
 ```
 
 ### 3. Clone the Repository
-Use the provided ```docker-compose.yml``` to start the database:
+You don't need to install MySQL locally. The project includes a ```docker-compose.yaml``` file to easily spin up the database.
 ```bash
 docker-compose up -d
 ```
