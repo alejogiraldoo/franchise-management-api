@@ -1,5 +1,6 @@
 package com.alejogiraldoo.franchisesystem.api.dtos.requests;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -12,6 +13,7 @@ import lombok.Data;
 public class BranchRequest {
 
     @NotNull(message = "Branch name is required")
+    @NotBlank(message = "Branch name is required")
     @Size(max = 50)
     private String name;
 }
