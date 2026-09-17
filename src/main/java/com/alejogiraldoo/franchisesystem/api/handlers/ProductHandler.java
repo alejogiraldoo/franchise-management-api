@@ -1,6 +1,7 @@
 package com.alejogiraldoo.franchisesystem.api.handlers;
 
 import com.alejogiraldoo.franchisesystem.api.dtos.requests.ProductRequest;
+import com.alejogiraldoo.franchisesystem.config.ReactiveValidatorConfig;
 import com.alejogiraldoo.franchisesystem.infrastructure.services.ProductService;
 import com.alejogiraldoo.franchisesystem.infrastructure.utils.IdValidator;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import reactor.core.publisher.Mono;
 public class ProductHandler {
 
     private final ProductService productService;
+    private final ReactiveValidatorConfig validator;
 
     public Mono<ServerResponse> updateProduct(ServerRequest request ) {
         Integer productId =  IdValidator.validate(
@@ -23,6 +25,7 @@ public class ProductHandler {
         );
 
         return request.bodyToMono(ProductRequest.class)
+                .flatMap(this.validator::validate)
                 .flatMap( body ->
                         this.productService.update( body, productId )
                                 .flatMap( updatedProduct ->

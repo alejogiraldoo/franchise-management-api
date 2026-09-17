@@ -2,6 +2,7 @@ package com.alejogiraldoo.franchisesystem.infrastructure.services;
 
 import com.alejogiraldoo.franchisesystem.api.dtos.requests.ProductStockRequest;
 import com.alejogiraldoo.franchisesystem.api.dtos.responses.ProductStock;
+import com.alejogiraldoo.franchisesystem.domain.exceptions.ResourceNotFoundException;
 import com.alejogiraldoo.franchisesystem.infrastructure.abstract_services.IStockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +24,11 @@ public class StockService implements IStockService {
                 .bind("productId", productId)
                 .mapProperties( ProductStock.class )
                 .all()
-                .switchIfEmpty( Mono.error(new IllegalArgumentException("Product or Franchise not found")) )
+                .switchIfEmpty(
+                        Mono.error(
+                                new ResourceNotFoundException(String.format("Product with ID %s or Branch with ID %s", productId, branchId))
+                        )
+                )
                 .flatMap( productStock -> {
                             productStock.setStock(request.getStock() );
                             return this.databaseClient.sql(UPDATE_PRODUCT_STOCK)

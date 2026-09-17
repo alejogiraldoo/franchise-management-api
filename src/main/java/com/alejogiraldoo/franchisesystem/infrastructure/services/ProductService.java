@@ -1,6 +1,8 @@
 package com.alejogiraldoo.franchisesystem.infrastructure.services;
 
 import com.alejogiraldoo.franchisesystem.api.dtos.requests.ProductRequest;
+import com.alejogiraldoo.franchisesystem.domain.exceptions.ExistingResourceException;
+import com.alejogiraldoo.franchisesystem.domain.exceptions.ResourceNotFoundException;
 import com.alejogiraldoo.franchisesystem.domain.repositories.BranchRepository;
 import com.alejogiraldoo.franchisesystem.domain.repositories.ProductRepository;
 import com.alejogiraldoo.franchisesystem.domain.tables.ProductTable;
@@ -35,7 +37,9 @@ public class ProductService implements IProductService {
                         .hasElement()
                         .flatMap( exists -> {
                             if (!exists) return
-                                    Mono.error(new IllegalArgumentException("Not found Product in Branch"));
+                                    Mono.error(
+                                            new ResourceNotFoundException(String.format("Product with ID %s in Branch with ID %s", id, branchId))
+                                    );
 
                             return this.databaseClient.sql(DELETE_PRODUCT_FROM_BRANCH)
                                     .bind("branchId", branchId)
@@ -58,10 +62,14 @@ public class ProductService implements IProductService {
                 )
                 .flatMap( tuple -> {
                     if ( tuple.getT1() ) return
-                            Mono.error(new IllegalArgumentException("Product already exists"));
+                            Mono.error(
+                                    new ExistingResourceException(String.format("Product %s", request.getName()))
+                            );
 
                     if ( !tuple.getT2() ) return
-                            Mono.error(new IllegalArgumentException("Not found Branch"));
+                            Mono.error(
+                                    new ResourceNotFoundException(String.format("Branch with ID: %s", branchId))
+                            );
 
                     var newProduct = ProductTable.builder()
                             .name( request.getName() )
@@ -87,7 +95,11 @@ public class ProductService implements IProductService {
     @Override
     public Mono<ProductTable> update(ProductRequest request, Integer id) {
         return this.productRepository.findById( id )
-                .switchIfEmpty( Mono.error(new IllegalArgumentException("Not found Product")) )
+                .switchIfEmpty(
+                        Mono.error(
+                                new ResourceNotFoundException(String.format("Product with ID: %s", id))
+                        )
+                )
                 .flatMap( product -> {
 
                     product.setName( request.getName() );

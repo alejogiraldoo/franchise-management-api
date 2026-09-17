@@ -1,6 +1,8 @@
 package com.alejogiraldoo.franchisesystem.infrastructure.services;
 
 import com.alejogiraldoo.franchisesystem.api.dtos.requests.BranchRequest;
+import com.alejogiraldoo.franchisesystem.domain.exceptions.ExistingResourceException;
+import com.alejogiraldoo.franchisesystem.domain.exceptions.ResourceNotFoundException;
 import com.alejogiraldoo.franchisesystem.domain.repositories.BranchRepository;
 import com.alejogiraldoo.franchisesystem.domain.repositories.FranchiseRepository;
 import com.alejogiraldoo.franchisesystem.domain.tables.BranchTable;
@@ -30,10 +32,14 @@ public class BranchService implements IBranchService {
         )
                 .flatMap( tuple -> {
                     if ( tuple.getT1() ) return
-                            Mono.error(new IllegalArgumentException("Branch already exists"));
+                            Mono.error(
+                                    new ExistingResourceException(String.format("Branch %s", request.getName()))
+                            );
 
                     if ( !tuple.getT2() ) return
-                            Mono.error(new IllegalArgumentException("Not found Franchise"));
+                            Mono.error(
+                                    new ResourceNotFoundException(String.format("Franchise with ID: %s", franchiseId))
+                            );
 
                     var newBranch = BranchTable.builder()
                             .name( request.getName() )
@@ -51,7 +57,11 @@ public class BranchService implements IBranchService {
     @Override
     public Mono<BranchTable> update(BranchRequest request, Integer id) {
         return this.branchRepository.findById( id )
-                .switchIfEmpty( Mono.error(new IllegalArgumentException("Not found Branch")) )
+                .switchIfEmpty(
+                        Mono.error(
+                                new ResourceNotFoundException(String.format("Branch with ID: %s", id))
+                        )
+                )
                 .flatMap( branch -> {
 
                     branch.setName( request.getName() );

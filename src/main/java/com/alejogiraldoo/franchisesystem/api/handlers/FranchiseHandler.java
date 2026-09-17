@@ -2,10 +2,12 @@ package com.alejogiraldoo.franchisesystem.api.handlers;
 
 import com.alejogiraldoo.franchisesystem.api.dtos.requests.BranchRequest;
 import com.alejogiraldoo.franchisesystem.api.dtos.requests.FranchiseRequest;
+import com.alejogiraldoo.franchisesystem.config.ReactiveValidatorConfig;
 import com.alejogiraldoo.franchisesystem.infrastructure.services.BranchService;
 import com.alejogiraldoo.franchisesystem.infrastructure.services.FranchiseService;
 import com.alejogiraldoo.franchisesystem.infrastructure.utils.IdValidator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
@@ -18,6 +20,7 @@ public class FranchiseHandler {
 
     private final FranchiseService franchiseService;
     private final BranchService branchService;
+    private final ReactiveValidatorConfig validator;
 
     public Mono<ServerResponse> getProductWithMostStock( ServerRequest request ) {
         Integer franchiseId =  IdValidator.validate(
@@ -38,10 +41,12 @@ public class FranchiseHandler {
 
     public Mono<ServerResponse> createFranchise( ServerRequest request ) {
         return request.bodyToMono(FranchiseRequest.class)
+                .flatMap(this.validator::validate)
                 .flatMap( body ->
                         this.franchiseService.create( body )
                                 .flatMap( newFranchise ->
-                                        ServerResponse.ok()
+                                        ServerResponse
+                                                .status(HttpStatus.CREATED)
                                                 .contentType(MediaType.APPLICATION_JSON)
                                                 .bodyValue( newFranchise )
                                 )
@@ -55,6 +60,7 @@ public class FranchiseHandler {
         );
 
         return request.bodyToMono(FranchiseRequest.class)
+                .flatMap(this.validator::validate)
                 .flatMap( body ->
                         this.franchiseService.update( body, franchiseId )
                                 .flatMap( updatedFranchise ->
@@ -72,10 +78,12 @@ public class FranchiseHandler {
         );
 
         return request.bodyToMono(BranchRequest.class)
+                .flatMap(this.validator::validate)
                 .flatMap( body ->
                         this.branchService.create( body, franchiseId )
                                 .flatMap( newBranch ->
-                                        ServerResponse.ok()
+                                        ServerResponse
+                                                .status(HttpStatus.CREATED)
                                                 .contentType(MediaType.APPLICATION_JSON)
                                                 .bodyValue( newBranch )
                                 )

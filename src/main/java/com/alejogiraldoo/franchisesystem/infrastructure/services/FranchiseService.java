@@ -2,6 +2,8 @@ package com.alejogiraldoo.franchisesystem.infrastructure.services;
 
 import com.alejogiraldoo.franchisesystem.api.dtos.requests.FranchiseRequest;
 import com.alejogiraldoo.franchisesystem.api.dtos.responses.ProductWithMostStock;
+import com.alejogiraldoo.franchisesystem.domain.exceptions.ExistingResourceException;
+import com.alejogiraldoo.franchisesystem.domain.exceptions.ResourceNotFoundException;
 import com.alejogiraldoo.franchisesystem.domain.repositories.FranchiseRepository;
 import com.alejogiraldoo.franchisesystem.domain.tables.FranchiseTable;
 import com.alejogiraldoo.franchisesystem.infrastructure.abstract_services.IFranchiseService;
@@ -38,7 +40,9 @@ public class FranchiseService implements IFranchiseService {
                 .hasElement()
                 .flatMap( exists -> {
                     if ( exists ) return
-                            Mono.error(new IllegalArgumentException("Franchise already exists"));
+                            Mono.error(
+                                    new ExistingResourceException(String.format("Franchise %s", request.getName()))
+                            );
 
                     var newFranchise = FranchiseTable.builder()
                             .name( request.getName() )
@@ -55,7 +59,11 @@ public class FranchiseService implements IFranchiseService {
     @Override
     public Mono<FranchiseTable> update(FranchiseRequest request, Integer id) {
         return this.franchiseRepository.findById( id )
-                .switchIfEmpty( Mono.error(new IllegalArgumentException("Not found Franchise")) )
+                .switchIfEmpty(
+                        Mono.error(
+                                new ResourceNotFoundException(String.format("Franchise with ID: %s", id))
+                        )
+                )
                 .flatMap( franchise -> {
 
                     franchise.setName( request.getName() );
