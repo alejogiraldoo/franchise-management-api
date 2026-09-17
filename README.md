@@ -110,13 +110,24 @@ Run the context-load test separately with MySQL running:
 
 On Windows, use `.\mvnw.cmd` instead of `./mvnw`. If you changed the database password, also set `SPRING_R2DBC_PASSWORD` for local runs and tests. The application otherwise uses the local database settings in `src/main/resources/application.yml`.
 
+## Infrastructure (`infra/localstack/`)
+
+The `infra/localstack/` directory provides an alternative hybrid deployment using LocalStack and AWS Secrets Manager:
+
+- **`main.tf`**: Terraform config that provisions an `aws_secretsmanager_secret` holding database credentials (uses LocalStack endpoints at `http://localhost:4566`).
+- **`compose.yml`**: A separate Docker Compose file (`infra/localstack/compose.yml`) that uses `mysql:8.4` with `HYBRID_DB_USER`/`HYBRID_DB_PASSWORD` credentials pulled from Secrets Manager — distinct from the root `docker-compose.yml`.
+- **`deploy.py`**: Python script that calls `terraform apply`, reads the secret from LocalStack, and runs `docker compose -f compose.yml up --build -d --wait` against the hybrid stack, then smoke-tests the API.
+
+For local development, use the root `docker-compose.yml`. The `infra/localstack/` stack is for cloud/IaC deployment scenarios.
+
 
 #### Architecture & Best Practices
-- **Git Workflow:** This project was built using a structured Git workflow (e.g., GitFlow or Feature Branches) to ensure clean commit history and traceability.
-
+- **Routing is functional, not annotated**: endpoints live in `api/routes/*.java` (`RouterFunction`) and handlers in `api/handlers/*.java` — never create new `@RestController`s.
+- **`config/` contains validators** (`ValidatorConfig`, `ReactiveValidatorConfig`) — not routers.
+- **`branch_products` junction table has no Java entity** — it is accessed only via raw SQL `DatabaseClient` queries in `infrastructure/services` and `infrastructure/helpers`.
 - **Reactive Streams:** Utilizes Mono and Flux to handle requests asynchronously, providing better resource utilization and scalability.
 
-- **Separation of Concerns:** Strictly layered architecture separating Controllers (Handlers), Services (Business Logic), and Repositories (Data Access).
+- **Separation of Concerns:** Strictly layered architecture separating Handlers, Services (Business Logic), and Repositories (Data Access).
 
 Developed as a practical assessment for a Backend Developer position.
 

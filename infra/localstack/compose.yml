@@ -1,0 +1,35 @@
+name: franchise-hybrid
+
+services:
+  api:
+    build:
+      context: ../..
+    ports:
+      - "127.0.0.1:8081:8080"
+    environment:
+      SPRING_R2DBC_URL: r2dbc:mysql://mysql:3306/franchise_system
+      SPRING_R2DBC_USERNAME: ${HYBRID_DB_USER:?Run deploy.py first}
+      SPRING_R2DBC_PASSWORD: ${HYBRID_DB_PASSWORD:?Run deploy.py first}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      MYSQL_DATABASE: franchise_system
+      MYSQL_USER: ${HYBRID_DB_USER:?Run deploy.py first}
+      MYSQL_PASSWORD: ${HYBRID_DB_PASSWORD:?Run deploy.py first}
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$${MYSQL_PASSWORD}\" mysql --protocol=TCP -h 127.0.0.1 -u \"$${MYSQL_USER}\" -D franchise_system -e 'SELECT 1 FROM branch_products LIMIT 1' > /dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ../../db:/docker-entrypoint-initdb.d:ro
+
+volumes:
+  mysql-data:
