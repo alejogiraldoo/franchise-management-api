@@ -64,33 +64,51 @@ The database architecture follows a strict hierarchical model designed for high 
 
 ## Installation & Local Deployment
 
-This project uses Docker to simplify local deployment. You do not need to install the database locally, only Docker and Java.
+### Run the API and MySQL with Docker
 
-### 1. Prerequisites
-- **Java 17+** (Java 21 recommended)
-- **Docker & Docker Compose** installed.
+Install Docker with Docker Compose and start the Docker daemon. No local Java, Maven, or MySQL installation is required. Run these commands from the repository root, with ports 8080 and 3306 available:
 
-### 2. Clone the Repository
 ```bash
-git clone https://github.com/alejogiraldoo/franchise-management-api.git
-cd franchise-management-api
+docker compose up --build -d
+docker compose ps
+docker compose logs -f api
 ```
 
-### 3. Clone the Repository
-You don't need to install MySQL locally. The project includes a ```docker-compose.yaml``` file to easily spin up the database.
+The API is available at `http://localhost:8080/franchise_system/api`. All endpoints in the tables above are relative to this base URL. Wait for the application startup message in the logs before sending requests.
+
+The multi-stage `Dockerfile` compiles with Java 21 and the Maven Wrapper, then runs the JAR with a Java 21 JRE as a non-root user. Tests are skipped during image construction because they use MySQL; run them separately as described below. `.dockerignore` restricts the build context to the application sources and build inputs.
+
+Compose waits for MySQL's healthcheck to verify the schema before starting the API. Inside Docker, the API connects to `mysql:3306` through `SPRING_R2DBC_URL`, not `localhost`. MySQL is exposed only on `127.0.0.1:3306` for local development.
+
+This configuration is for local development: it preserves the existing root login and default password. Override `MYSQL_ROOT_PASSWORD` in your shell before starting a fresh database; Compose supplies the same password to both services. Changing this variable does not change credentials in an existing volume. For production, use a dedicated database user and managed secrets.
+
+MySQL data persists in the existing `mysql-data` volume. SQL scripts in `db/` run only when the database is first initialized. The existing `mysql:latest` image selection is retained to avoid an implicit downgrade of an existing volume; pin a compatible version before production deployment.
+
+Stop the containers without deleting data:
+
 ```bash
-docker-compose up -d
+docker compose down
 ```
 
-### 4. Run the Application
-You can run the application using the Maven Wrapper:
+Do not add `-v` unless you intend to permanently delete the database and reinitialize its schema.
+
+### Run locally or execute tests
+
+For execution outside Docker, install **JDK 21**. Stop the containerized API if it is running to free port 8080, then start only MySQL:
+
 ```bash
+docker compose stop api
+docker compose up -d --wait mysql
 ./mvnw spring-boot:run
 ```
 
-(On Windows, use ```.\mvnw.cmd spring-boot:run```)
+Run the context-load test separately with MySQL running:
 
-The server will start on http://localhost:8080.
+```bash
+./mvnw test
+```
+
+On Windows, use `.\mvnw.cmd` instead of `./mvnw`. If you changed the database password, also set `SPRING_R2DBC_PASSWORD` for local runs and tests. The application otherwise uses the local database settings in `src/main/resources/application.yml`.
 
 
 #### Architecture & Best Practices
