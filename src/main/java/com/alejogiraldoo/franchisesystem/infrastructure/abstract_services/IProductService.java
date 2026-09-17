@@ -6,6 +6,6 @@ import reactor.core.publisher.Mono;
 
 public interface IProductService extends IResourceCrudService<ProductRequest, ProductTable, Integer, Integer> {
 
-    Mono<Void> delete(Integer id );
+    Mono<Void> delete( Integer id, Integer branchId );
 
 }

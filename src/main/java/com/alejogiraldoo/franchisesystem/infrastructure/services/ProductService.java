@@ -25,15 +25,27 @@ public class ProductService implements IProductService {
     private final DatabaseClient databaseClient;
 
     @Override
-    public Mono<Void> delete(Integer id) {
-        return this.productRepository.findById( id )
-                .switchIfEmpty( Mono.error(new IllegalArgumentException("Not found Product")) )
-                .then(
-                    this.productRepository.deleteById( id )
-                            .subscribeOn(Schedulers.boundedElastic())
-                )
-                .doOnSuccess( result -> log.info("Product successfully deleted: ID {}", id) )
-                .doOnError( error -> log.error("Product couldn't be deleted: ", error));
+    public Mono<Void> delete(Integer id, Integer branchId) {
+                return this.databaseClient.sql(SELECT_PRODUCT_FROM_BRANCH)
+                        .bind("branchId", branchId)
+                        .bind("productId", id)
+                        .fetch()
+                        .one()
+                        .filter( result -> (Long) result.get("product_exists") == 1)
+                        .hasElement()
+                        .flatMap( exists -> {
+                            if (!exists) return
+                                    Mono.error(new IllegalArgumentException("Not found Product in Branch"));
+
+                            return this.databaseClient.sql(DELETE_PRODUCT_FROM_BRANCH)
+                                    .bind("branchId", branchId)
+                                    .bind("productId", id)
+                                    .fetch()
+                                    .rowsUpdated();
+                        })
+                        .then()
+                        .doOnSuccess( result -> log.info("Product successfully removed from branch: ID {}", id) )
+                        .doOnError( error -> log.error("Product couldn't be removed from branch: ", error));
     }
 
     @Override
@@ -86,6 +98,14 @@ public class ProductService implements IProductService {
                 .doOnSuccess( product -> log.info("Product successfully updated: {}", product) )
                 .doOnError( error -> log.error("Product couldn't be updated: ", error));
     }
+
+    private static final String SELECT_PRODUCT_FROM_BRANCH = """
+            SELECT COUNT(*) = 1 AS product_exists FROM branch_products WHERE branch_id = :branchId AND product_id = :productId;
+            """;
+
+    private static final String DELETE_PRODUCT_FROM_BRANCH = """
+            DELETE FROM branch_products WHERE branch_id = :branchId AND product_id = :productId;
+            """;
 
     private static final String INSERT_BRANCH_PRODUCTS = """
             INSERT INTO branch_products (branch_id, product_id, product_stock)
