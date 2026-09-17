@@ -13,6 +13,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.ServerWebInputException;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.ObjectMapper;
 
@@ -41,9 +42,12 @@ public class ErrorHandler implements ErrorWebExceptionHandler {
                 || ex instanceof ExistingResourceException
         ){
             status = HttpStatus.BAD_REQUEST;
+        } else if ( ex instanceof ServerWebInputException ) {
+            status = HttpStatus.BAD_REQUEST;
+            message = "Invalid request format, please confirm attribute typetus";
         } else if ( ex instanceof ResourceNotFoundException) {
             status = HttpStatus.NOT_FOUND;
-        } else {
+        }else {
             status = HttpStatus.INTERNAL_SERVER_ERROR;
         }
 

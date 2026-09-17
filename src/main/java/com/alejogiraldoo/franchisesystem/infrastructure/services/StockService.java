@@ -2,8 +2,8 @@ package com.alejogiraldoo.franchisesystem.infrastructure.services;
 
 import com.alejogiraldoo.franchisesystem.api.dtos.requests.ProductStockRequest;
 import com.alejogiraldoo.franchisesystem.api.dtos.responses.ProductStock;
-import com.alejogiraldoo.franchisesystem.domain.exceptions.ResourceNotFoundException;
 import com.alejogiraldoo.franchisesystem.infrastructure.abstract_services.IStockService;
+import com.alejogiraldoo.franchisesystem.infrastructure.helpers.ProductHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.r2dbc.core.DatabaseClient;
@@ -16,19 +16,11 @@ import reactor.core.publisher.Mono;
 public class StockService implements IStockService {
 
     private final DatabaseClient databaseClient;
+    private final ProductHelper productHelper;
 
     @Override
     public Mono<ProductStock> update(ProductStockRequest request, Integer branchId, Integer productId) {
-        return this.databaseClient.sql(SELECT_BRANCH_PRODUCTS)
-                .bind("branchId", branchId)
-                .bind("productId", productId)
-                .mapProperties( ProductStock.class )
-                .all()
-                .switchIfEmpty(
-                        Mono.error(
-                                new ResourceNotFoundException(String.format("Product with ID %s or Branch with ID %s", productId, branchId))
-                        )
-                )
+        return this.productHelper.getProductStockInfo( branchId, productId )
                 .flatMap( productStock -> {
                             productStock.setStock(request.getStock() );
                             return this.databaseClient.sql(UPDATE_PRODUCT_STOCK)
@@ -36,7 +28,7 @@ public class StockService implements IStockService {
                                     .bind("branchId", branchId)
                                     .bind("productId", productId)
                                     .fetch()
-                                    .all()
+                                    .one()
                                     .then( Mono.just( productStock ) );
                         }
                 )
@@ -44,17 +36,6 @@ public class StockService implements IStockService {
                 .doOnSuccess( productStock -> log.info("Product stock successfully updated: {}", productStock) )
                 .doOnError( error -> log.error("Product stock couldn't be updated: ", error));
     }
-
-    private static final String SELECT_BRANCH_PRODUCTS = """
-            SELECT
-            b.branch_name,
-            p.product_name,
-            bp.product_stock AS stock
-            FROM branch_products bp
-            INNER JOIN products p ON p.product_id = bp.product_id
-            INNER JOIN branches b ON b.branch_id = bp.branch_id
-            WHERE bp.branch_id = :branchId AND bp.product_id = :productId;
-            """;
 
     private static final String UPDATE_PRODUCT_STOCK = """
             UPDATE branch_products

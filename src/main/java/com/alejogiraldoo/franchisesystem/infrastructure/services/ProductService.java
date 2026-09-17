@@ -1,12 +1,14 @@
 package com.alejogiraldoo.franchisesystem.infrastructure.services;
 
 import com.alejogiraldoo.franchisesystem.api.dtos.requests.ProductRequest;
+import com.alejogiraldoo.franchisesystem.api.dtos.responses.ProductStock;
 import com.alejogiraldoo.franchisesystem.domain.exceptions.ExistingResourceException;
 import com.alejogiraldoo.franchisesystem.domain.exceptions.ResourceNotFoundException;
 import com.alejogiraldoo.franchisesystem.domain.repositories.BranchRepository;
 import com.alejogiraldoo.franchisesystem.domain.repositories.ProductRepository;
 import com.alejogiraldoo.franchisesystem.domain.tables.ProductTable;
 import com.alejogiraldoo.franchisesystem.infrastructure.abstract_services.IProductService;
+import com.alejogiraldoo.franchisesystem.infrastructure.helpers.ProductHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.r2dbc.core.DatabaseClient;
@@ -22,13 +24,14 @@ import java.util.Optional;
 @Service
 public class ProductService implements IProductService {
 
+    private final DatabaseClient databaseClient;
     private final ProductRepository productRepository;
     private final BranchRepository branchRepository;
-    private final DatabaseClient databaseClient;
+    private final ProductHelper productHelper;
 
     @Override
     public Mono<Void> delete(Integer id, Integer branchId) {
-                return this.databaseClient.sql(SELECT_PRODUCT_FROM_BRANCH)
+                return this.databaseClient.sql(IS_PRODUCT_IN_BRANCH_QUERY)
                         .bind("branchId", branchId)
                         .bind("productId", id)
                         .fetch()
@@ -53,7 +56,7 @@ public class ProductService implements IProductService {
     }
 
     @Override
-    public Mono<ProductTable> create(ProductRequest request, Integer branchId) {
+    public Mono<ProductStock> create(ProductRequest request, Integer branchId) {
                 return Flux.zip(
                         this.productRepository.findByNameIgnoreCase( request.getName() )
                                 .hasElement(),
@@ -77,13 +80,13 @@ public class ProductService implements IProductService {
 
                     return this.productRepository.save( newProduct )
                             .flatMap( product ->
-                                this.databaseClient.sql(INSERT_BRANCH_PRODUCTS)
+                                this.databaseClient.sql(INSERT_BRANCH_PRODUCT)
                                         .bind("branchId", branchId)
                                         .bind("productId", product.getId())
                                         .bind("productStock", Optional.ofNullable(request.getStock()).orElse(0)  )
                                         .fetch()
                                         .rowsUpdated()
-                                        .then( Mono.just( product ) )
+                                        .then( this.productHelper.getProductStockInfo( branchId, product.getId() ) )
                             )
                             .subscribeOn(Schedulers.boundedElastic());
                 })
@@ -93,11 +96,11 @@ public class ProductService implements IProductService {
     }
 
     @Override
-    public Mono<ProductTable> update(ProductRequest request, Integer id) {
-        return this.productRepository.findById( id )
+    public Mono<ProductTable> update(ProductRequest request, Integer productId) {
+        return this.productRepository.findById(productId)
                 .switchIfEmpty(
                         Mono.error(
-                                new ResourceNotFoundException(String.format("Product with ID: %s", id))
+                                new ResourceNotFoundException(String.format("Product with ID: %s", productId))
                         )
                 )
                 .flatMap( product -> {
@@ -111,7 +114,7 @@ public class ProductService implements IProductService {
                 .doOnError( error -> log.error("Product couldn't be updated: ", error));
     }
 
-    private static final String SELECT_PRODUCT_FROM_BRANCH = """
+    private static final String IS_PRODUCT_IN_BRANCH_QUERY = """
             SELECT COUNT(*) = 1 AS product_exists FROM branch_products WHERE branch_id = :branchId AND product_id = :productId;
             """;
 
@@ -119,7 +122,7 @@ public class ProductService implements IProductService {
             DELETE FROM branch_products WHERE branch_id = :branchId AND product_id = :productId;
             """;
 
-    private static final String INSERT_BRANCH_PRODUCTS = """
+    private static final String INSERT_BRANCH_PRODUCT = """
             INSERT INTO branch_products (branch_id, product_id, product_stock)
             VALUES(:branchId, :productId, :productStock);
             """;

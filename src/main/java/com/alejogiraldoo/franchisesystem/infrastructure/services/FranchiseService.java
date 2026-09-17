@@ -20,8 +20,8 @@ import reactor.core.scheduler.Schedulers;
 @Service
 public class FranchiseService implements IFranchiseService {
 
-    private final FranchiseRepository franchiseRepository;
     private final DatabaseClient databaseClient;
+    private final FranchiseRepository franchiseRepository;
 
     @Override
     public Flux<ProductWithMostStock> getProductWithMostStock(Integer franchiseId) {
