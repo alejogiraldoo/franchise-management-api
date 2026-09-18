@@ -25,13 +25,24 @@ public class FranchiseService implements IFranchiseService {
 
     @Override
     public Flux<ProductWithMostStock> getProductWithMostStock(Integer franchiseId) {
-        return this.databaseClient.sql(SELECT_PRODUCT_WITH_MOST_STOCK_PER_BRANCH)
-                .bind("franchiseId", franchiseId)
-                .mapProperties( ProductWithMostStock.class )
-                .all()
-                .doOnSubscribe( subscription -> log.info("Retrieving franchise products with most stock per branch: ") )
-                .doOnNext( product -> log.info("Product: {}", product))
-                .doOnError( error -> log.error("Franchise couldn't be created: ", error));
+        return this.franchiseRepository.findById( franchiseId )
+                .hasElement()
+                .flatMapMany( exists -> {
+
+                    if ( !exists ) return
+                            Mono.error(
+                                    new ResourceNotFoundException(String.format("Franchise with ID: %s", franchiseId))
+                            );
+
+                    return this.databaseClient.sql(SELECT_PRODUCT_WITH_MOST_STOCK_PER_BRANCH)
+                            .bind("franchiseId", franchiseId)
+                            .mapProperties( ProductWithMostStock.class )
+                            .all()
+                            .doOnSubscribe( subscription -> log.info("Retrieving franchise products with most stock per branch: ") )
+                            .doOnNext( product -> log.info("Product: {}", product))
+                            .doOnError( error -> log.error("Franchise couldn't be created: ", error));
+
+                });
     }
 
     @Override

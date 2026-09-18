@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import socket
 import time
 import urllib.error
 import urllib.request
@@ -44,10 +45,10 @@ def main():
         "--wait", "--wait-timeout", "180", env=env)
     for attempt in range(60):
         try:
-            status, _ = request("GET", "/franchises/2147483647/max-stock")
-            if status in (200, 204):
-                break
-        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            s = socket.create_connection(("127.0.0.1", 8081), timeout=2)
+            s.close()
+            break
+        except (socket.timeout, ConnectionRefusedError, OSError):
             pass
         time.sleep(2)
     else:
