@@ -7,7 +7,8 @@ import lombok.Data;
 @AllArgsConstructor
 public class ProductStock {
 
-    private String branchName;
+    private Integer productId;
     private String productName;
+    private String branchName;
     private Integer stock;
 }

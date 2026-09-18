@@ -32,8 +32,9 @@ public class ProductHelper {
 
     private static final String SELECT_BRANCH_PRODUCTS = """
             SELECT
-            b.branch_name,
+            p.product_id,
             p.product_name,
+            b.branch_name,
             bp.product_stock AS stock
             FROM branch_products bp
             INNER JOIN products p ON p.product_id = bp.product_id
