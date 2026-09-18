@@ -7,9 +7,9 @@ spring:
 
   # R2DBC Connection
   r2dbc:
-    url: r2dbc:mysql://localhost:3306/franchise_system
-    username: root
-    password: 123456
+    url: ${SPRING_R2DBC_URL:r2dbc:mysql://localhost:3306/franchise_system}
+    username: ${SPRING_R2DBC_USERNAME:root}
+    password: ${SPRING_R2DBC_PASSWORD:123456}
     # R2DBC Pool Connection
     pool:
       enabled: true
