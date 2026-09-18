@@ -97,19 +97,29 @@ public class ProductService implements IProductService {
 
     @Override
     public Mono<ProductTable> update(ProductRequest request, Integer productId) {
-        return this.productRepository.findById(productId)
-                .switchIfEmpty(
-                        Mono.error(
-                                new ResourceNotFoundException(String.format("Product with ID: %s", productId))
+        return Flux.zip(
+                this.productRepository.findByNameIgnoreCase( request.getName() )
+                        .hasElement(),
+                this.productRepository.findById(productId)
+                        .switchIfEmpty(
+                                Mono.error(
+                                        new ResourceNotFoundException(String.format("Product with ID: %s", productId))
+                                )
                         )
-                )
-                .flatMap( product -> {
+        )
+                .flatMap( tuple -> {
 
-                    product.setName( request.getName() );
+                    if (tuple.getT1()) return
+                            Mono.error(
+                                    new ExistingResourceException(String.format("Product %s", request.getName()))
+                            );
 
-                    return this.productRepository.save( product )
+                    tuple.getT2().setName( request.getName() );
+
+                    return this.productRepository.save( tuple.getT2() )
                             .subscribeOn(Schedulers.boundedElastic());
                 })
+                .single()
                 .doOnSuccess( product -> log.info("Product successfully updated: {}", product) )
                 .doOnError( error -> log.error("Product couldn't be updated: ", error));
     }

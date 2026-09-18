@@ -56,19 +56,28 @@ public class BranchService implements IBranchService {
 
     @Override
     public Mono<BranchTable> update(BranchRequest request, Integer id) {
-        return this.branchRepository.findById( id )
-                .switchIfEmpty(
-                        Mono.error(
-                                new ResourceNotFoundException(String.format("Branch with ID: %s", id))
-                        )
+        return Flux.zip(
+                        this.branchRepository.findByNameIgnoreCase( request.getName() )
+                                .hasElement(),
+                        this.branchRepository.findById( id )
+                                .switchIfEmpty(
+                                        Mono.error(
+                                                new ResourceNotFoundException(String.format("Branch with ID: %s", id))
+                                        )
+                                )
                 )
-                .flatMap( branch -> {
+                .flatMap( tuple -> {
+                    if (tuple.getT1()) return
+                            Mono.error(
+                                    new ExistingResourceException(String.format("Branch %s", request.getName()))
+                            );
 
-                    branch.setName( request.getName() );
+                    tuple.getT2().setName(request.getName());
 
-                    return this.branchRepository.save( branch )
+                    return this.branchRepository.save(tuple.getT2())
                             .subscribeOn(Schedulers.boundedElastic());
                 })
+                .single()
                 .doOnSuccess( branch -> log.info("Branch successfully updated: {}", branch) )
                 .doOnError( error -> log.error("Branch couldn't be updated: ", error));
     }

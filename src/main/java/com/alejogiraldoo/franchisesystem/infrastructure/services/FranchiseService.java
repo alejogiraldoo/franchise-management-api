@@ -58,19 +58,29 @@ public class FranchiseService implements IFranchiseService {
 
     @Override
     public Mono<FranchiseTable> update(FranchiseRequest request, Integer id) {
-        return this.franchiseRepository.findById( id )
-                .switchIfEmpty(
-                        Mono.error(
-                                new ResourceNotFoundException(String.format("Franchise with ID: %s", id))
+        return Flux.zip(
+                this.franchiseRepository.findByNameIgnoreCase( request.getName() )
+                        .hasElement(),
+                this.franchiseRepository.findById( id )
+                        .switchIfEmpty(
+                                Mono.error(
+                                        new ResourceNotFoundException(String.format("Franchise with ID: %s", id))
+                                )
                         )
-                )
-                .flatMap( franchise -> {
+        )
+                .flatMap( tuple -> {
 
-                    franchise.setName( request.getName() );
+                    if (tuple.getT1()) return
+                            Mono.error(
+                                    new ExistingResourceException(String.format("Franchise %s", request.getName()))
+                            );
 
-                    return this.franchiseRepository.save( franchise )
+                    tuple.getT2().setName( request.getName() );
+
+                    return this.franchiseRepository.save( tuple.getT2() )
                             .subscribeOn(Schedulers.boundedElastic());
                 })
+                .single()
                 .doOnSuccess( franchise -> log.info("Franchise successfully updated: {}", franchise) )
                 .doOnError( error -> log.error("Franchise couldn't be updated: ", error));
 
