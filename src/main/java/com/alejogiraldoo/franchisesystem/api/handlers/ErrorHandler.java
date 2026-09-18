@@ -44,7 +44,7 @@ public class ErrorHandler implements ErrorWebExceptionHandler {
             status = HttpStatus.BAD_REQUEST;
         } else if ( ex instanceof ServerWebInputException ) {
             status = HttpStatus.BAD_REQUEST;
-            message = "Invalid request format, please confirm attribute typetus";
+            message = "Invalid request format, please confirm attributes types";
         } else if ( ex instanceof ResourceNotFoundException) {
             status = HttpStatus.NOT_FOUND;
         }else {
