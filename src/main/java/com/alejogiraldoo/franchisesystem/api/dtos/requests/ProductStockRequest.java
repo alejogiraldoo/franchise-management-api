@@ -1,7 +1,7 @@
 package com.alejogiraldoo.franchisesystem.api.dtos.requests;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,6 +12,6 @@ import lombok.Data;
 public class ProductStockRequest {
 
     @NotNull(message = "Product stock is required")
-    @NotBlank(message = "Branch name is required")
+    @Positive( message = "Product stock must be a valid whole number starting from 0")
     private Integer stock;
 }
