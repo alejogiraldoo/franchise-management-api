@@ -112,14 +112,47 @@ On Windows, use `.\mvnw.cmd` instead of `./mvnw`. If you changed the database pa
 
 ## Infrastructure (`infra/localstack/`)
 
-The `infra/localstack/` directory provides an alternative hybrid deployment using LocalStack and AWS Secrets Manager:
+#### Deploy with Terraform and LocalStack
 
-- **`main.tf`**: Terraform config that provisions an `aws_secretsmanager_secret` holding database credentials (uses LocalStack endpoints at `http://localhost:4566`).
-- **`compose.yml`**: A separate Docker Compose file (`infra/localstack/compose.yml`) that uses `mysql:8.4` with `HYBRID_DB_USER`/`HYBRID_DB_PASSWORD` credentials pulled from Secrets Manager — distinct from the root `docker-compose.yml`.
-- **`deploy.py`**: Python script that calls `terraform apply`, reads the secret from LocalStack, and runs `docker compose -f compose.yml up --build -d --wait` against the hybrid stack, then smoke-tests the API.
+The `infra/localstack/` stack uses **Terraform** to provision resources in LocalStack and **Docker Compose** to run the API and MySQL. Follow this order:
 
-For local development, use the root `docker-compose.yml`. The `infra/localstack/` stack is for cloud/IaC deployment scenarios.
+**1. Initialize Terraform** (first time only):
 
+```bash
+cd infra/localstack
+terraform init
+```
+
+**2. Apply the Terraform configuration** (creates the database secret in LocalStack):
+
+```bash
+terraform apply
+```
+
+This creates the `franchise-hybrid/database` secret in LocalStack (mocked AWS Secrets Manager at `http://localhost:4566`).
+
+**3. Run the full deployment**:
+
+```bash
+python deploy.py
+```
+
+This script:
+- Reads the secret from LocalStack
+- Starts `docker compose -f compose.yml up --build -d --wait` (API + MySQL)
+- Waits for the API to be ready by checking that port 8081 accepts TCP connections
+- Performs a smoke-test by creating a franchise, branch, and product (3 HTTP 201 responses)
+
+**4. Stop the hybrid stack**:
+
+```bash
+docker compose -f compose.yml down
+terraform destroy
+```
+
+**Note:** The `deploy.py` script does **not** invoke `terraform apply` internally. You must run `terraform apply` manually before `python deploy.py` so the secret exists in LocalStack.
+
+For local development, use the root `docker-compose.yml`. The `infra/localstack/` stack is for IaC deployment scenarios.
 
 #### Architecture & Best Practices
 - **Routing is functional, not annotated**: endpoints live in `api/routes/*.java` (`RouterFunction`) and handlers in `api/handlers/*.java` — never create new `@RestController`s.
